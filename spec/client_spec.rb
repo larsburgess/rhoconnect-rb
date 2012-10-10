@@ -1,39 +1,39 @@
 require File.join(File.dirname(__FILE__), 'spec_helper')
 
-describe Rhoconnect::Client do
+describe Rhoconnectrb::Client do
   
   context "on initialize" do
     it "should initialize with Rhoconnect_URL environment var" do
       ENV['RHOCONNECT_URL'] = "http://token@test.rhoconnect.com"
-      c = Rhoconnect::Client.new
+      c = Rhoconnectrb::Client.new
       c.token.should == 'token'
       c.uri.should == 'http://test.rhoconnect.com'
       ENV.delete('Rhoconnect_URL')
     end
   
     it "should initialize with :uri parameter" do
-      c = Rhoconnect::Client.new(:uri => "http://token@test.rhoconnect.com")
+      c = Rhoconnectrb::Client.new(:uri => "http://token@test.rhoconnect.com")
       c.token.should == 'token'
       c.uri.should == 'http://test.rhoconnect.com'
     end
   
     it "should initialize with :token parameter" do
-      c = Rhoconnect::Client.new(:uri => "http://test.rhoconnect.com", :token => "token")
+      c = Rhoconnectrb::Client.new(:uri => "http://test.rhoconnect.com", :token => "token")
       c.token.should == 'token'
       c.uri.should == 'http://test.rhoconnect.com'
     end
     
     it "should initialize with configure block" do
-      Rhoconnect.configure do |config|
+      Rhoconnectrb.configure do |config|
         config.uri = "http://test.rhoconnect.com"
         config.token = "token"
       end
       begin
-        c = Rhoconnect::Client.new
+        c = Rhoconnectrb::Client.new
         c.token.should == 'token'
         c.uri.should == 'http://test.rhoconnect.com'
       ensure
-        Rhoconnect.configure do |config|
+        Rhoconnectrb.configure do |config|
           config.uri = nil
           config.token = nil   
         end
@@ -42,23 +42,23 @@ describe Rhoconnect::Client do
   
     it "should raise ArgumentError if uri is missing" do
       ENV['RHOCONNECT_URL'] = nil
-      lambda { Rhoconnect::Client.new }.should raise_error(ArgumentError, "Please provide a :uri or set RHOCONNECT_URL")
+      lambda { Rhoconnectrb::Client.new }.should raise_error(ArgumentError, "Please provide a :uri or set RHOCONNECT_URL")
     end
   
     it "should raise ArugmentError if token is missing" do
       lambda { 
-        Rhoconnect::Client.new(:uri => "http://test.rhoconnect.com")
+        Rhoconnectrb::Client.new(:uri => "http://test.rhoconnect.com")
       }.should raise_error(ArgumentError, "Please provide a :token or set it in uri")
     end
   end
   
   context "on create update destroy" do
     before(:each) do
-      @client = Rhoconnect::Client.new(:uri => "http://token@test.rhoconnect.com")
+      @client = Rhoconnectrb::Client.new(:uri => "http://token@test.rhoconnect.com")
     end
     
     it "should create an object" do
-      stub_request(:post, "http://test.rhoconnect.com/api/source/push_objects").with(
+      stub_request(:post, "http://test.rhoconnect.com/app/v1/Person/push_objects").with(
         :headers => {"Content-Type" => "application/json"}
       ).to_return(:status => 200, :body => "done")
       resp = @client.create("Person", "user1", 
@@ -72,7 +72,7 @@ describe Rhoconnect::Client do
     end
     
     it "should update an object" do
-      stub_request(:post, "http://test.rhoconnect.com/api/source/push_objects").with(
+      stub_request(:post, "http://test.rhoconnect.com/app/v1/Person/push_objects").with(
         :headers => {"Content-Type" => "application/json"}
       ).to_return(:status => 200, :body => "done")
       resp = @client.update("Person", "user1", 
@@ -86,7 +86,7 @@ describe Rhoconnect::Client do
     end
     
     it "should destroy an object" do
-      stub_request(:post, "http://test.rhoconnect.com/api/source/push_deletes").with(
+      stub_request(:post, "http://test.rhoconnect.com/app/v1/Person/push_deletes").with(
         :headers => {"Content-Type" => "application/json"}
       ).to_return(:status => 200, :body => "done")
       resp = @client.destroy("Person", "user1", 
@@ -102,7 +102,7 @@ describe Rhoconnect::Client do
   
   context "on set callbacks" do
     before(:each) do
-      @client = Rhoconnect::Client.new(:uri => "http://token@test.rhoconnect.com")
+      @client = Rhoconnectrb::Client.new(:uri => "http://token@test.rhoconnect.com")
     end
     
     it "should set auth callback" do
