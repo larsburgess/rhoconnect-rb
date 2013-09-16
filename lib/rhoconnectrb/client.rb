@@ -1,6 +1,6 @@
 require 'uri'
 
-module Rhoconnect
+module Rhoconnectrb
   class Client
     attr_accessor :uri, :token
 
@@ -14,16 +14,16 @@ module Rhoconnect
     
     # allow configuration, uri or environment variable initialization
     def initialize(params = {})
-      uri = params[:uri] || Rhoconnect.configuration.uri || ENV['RHOCONNECT_URL']
+      uri = params[:uri] || Rhoconnectrb.configuration.uri || ENV['RHOCONNECT_URL']
       raise ArgumentError.new("Please provide a :uri or set RHOCONNECT_URL") unless uri
       @uri = URI.parse(uri)
       
-      @token = params[:token] || Rhoconnect.configuration.token || @uri.user
+      @token = params[:token] || Rhoconnectrb.configuration.token || @uri.user
       @uri.user = nil; @uri = @uri.to_s
       
       raise ArgumentError.new("Please provide a :token or set it in uri") unless @token
       
-      RestClient.proxy = ENV['HTTP_PROXY'] || ENV['http_proxy'] || Rhoconnect.configuration.http_proxy
+      RestClient.proxy = ENV['HTTP_PROXY'] || ENV['http_proxy'] || Rhoconnectrb.configuration.http_proxy
     end
     
     def create(source_name, partition, obj = {})
@@ -61,9 +61,8 @@ module Rhoconnect
     def send_objects(action, source_name, partition, obj = {}) # :nodoc:
       validate_args(source_name, partition, obj)
       
-      process(:post, "/api/source/#{action}",
+      process(:post, "/app/v1/#{source_name}/#{action}",
         {
-          :source_id => source_name,
           :user_id => partition,
           :objects => action == :push_deletes ? [obj['id'].to_s] : { obj['id'] => obj }
         }
@@ -77,8 +76,8 @@ module Rhoconnect
     def process(method, path, payload = nil) # :nodoc:
       headers = api_headers
       unless method == :get
-        payload  = payload.merge!(:api_token => @token).to_json
-        headers = api_headers.merge(:content_type => 'application/json')
+        payload  = payload.to_json
+        headers = api_headers.merge(:content_type => 'application/json', 'X-RhoConnect-API-TOKEN' => @token)
       end
       args     = [method, payload, headers].compact
       response = resource(path).send(*args)
@@ -87,7 +86,7 @@ module Rhoconnect
     
     def api_headers   # :nodoc:
       {
-        'User-Agent'           => Rhoconnect::VERSION,
+        'User-Agent'           => Rhoconnectrb::VERSION,
         'X-Ruby-Version'       => RUBY_VERSION,
         'X-Ruby-Platform'      => RUBY_PLATFORM
       }

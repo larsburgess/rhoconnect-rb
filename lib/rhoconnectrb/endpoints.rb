@@ -1,21 +1,21 @@
 require 'json'
 
-module Rhoconnect
+module Rhoconnectrb
   class EndpointHelpers
     def self.authenticate(content_type, body)
       code, params = 200, parse_params(content_type, body)
-      if Rhoconnect.configuration.authenticate
-        code = 401 unless Rhoconnect.configuration.authenticate.call(params)
+      if Rhoconnectrb.configuration.authenticate
+        code = 401 unless Rhoconnectrb.configuration.authenticate.call(params)
       end
       [code, {'Content-Type' => 'text/plain'}, [code == 200 ? params['login'] : ""]]
     end
-    
+
     def self.query(content_type, body)
       params = parse_params(content_type, body)
       action, c_type, result, records = :rhoconnect_query, 'application/json', {}, []
       # Call resource rhoconnect_query class method
       code, error = get_rhoconnect_resource(params['resource'], action) do |klass|
-        records = klass.send(action, params['partition'])
+        records = klass.send(action, params['partition'], params['attributes'])
       end
       if code == 200
         # Serialize records into hash of hashes
@@ -28,10 +28,10 @@ module Rhoconnect
         c_type = 'text/plain'
         # Log warning if something broke
         warn error
-      end    
+      end
       [code, {'Content-Type' => c_type}, [result]]
     end
-    
+
     def self.on_cud(action, content_type, body)
       params = parse_params(content_type, body)
       object_id = ""
@@ -42,21 +42,21 @@ module Rhoconnect
       end
       [code, {'Content-Type' => "text/plain"}, [error || object_id]]
     end
-    
+
     def self.create(content_type, body)
       self.on_cud(:create, content_type, body)
     end
-    
+
     def self.update(content_type, body)
-      self.on_cud(:update, content_type, body)  
+      self.on_cud(:update, content_type, body)
     end
-    
+
     def self.delete(content_type, body)
-      self.on_cud(:delete, content_type, body)  
+      self.on_cud(:delete, content_type, body)
     end
-    
+
     private
-    
+
     def self.get_rhoconnect_resource(resource_name, action)
       code, error = 200, nil
       begin
@@ -66,7 +66,7 @@ module Rhoconnect
         error = "error on method `#{action}` for #{resource_name}: #{ne.message}"
         code = 404
       rescue NameError
-        error = "Missing Rhoconnect::Resource #{resource_name}"
+        error = "Missing Rhoconnectrb::Resource #{resource_name}"
         code = 404
       # TODO: catch HaltException and Exception here, built-in source adapter will handle them
       rescue Exception => e
@@ -75,11 +75,11 @@ module Rhoconnect
       end
       [code, error]
     end
-    
+
     def self.parse_params(content_type, params)
       if content_type and content_type.match(/^application\/json/) and params and params.length > 2
         JSON.parse(params)
-      else 
+      else
         {}
       end
     end
@@ -91,23 +91,23 @@ if defined? Rails
   #if Rails::VERSION::STRING.to_i >= 3
     class Engine < Rails::Engine; end
   #end
-  
-  module Rhoconnect
+
+  module Rhoconnectrb
     class BaseEndpoint
       def self.call(env)
         req = Rack::Request.new(env)
-        Rhoconnect::EndpointHelpers.send(self.to_s.downcase.split("::")[1].to_sym, req.content_type, req.body.read)
+        Rhoconnectrb::EndpointHelpers.send(self.to_s.downcase.split("::")[1].to_sym, req.content_type, req.body.read)
       end
     end
-    
+
     class Authenticate < BaseEndpoint; end
-    
+
     class Query < BaseEndpoint;  end
-    
+
     class Create < BaseEndpoint; end
-    
+
     class Update < BaseEndpoint; end
-    
+
     class Delete < BaseEndpoint; end
   end
 end
@@ -117,7 +117,7 @@ end
 if defined? Sinatra
   # Defines Sinatra routes
   # This is automatically registered if you are using
-  # the 'classic' style sinatra application.  To use in a 
+  # the 'classic' style sinatra application.  To use in a
   # classic application:
   #
   # require 'rubygems'
@@ -133,9 +133,9 @@ if defined? Sinatra
   #
   # require 'sinatra/base'
   # require 'rhoconnect-rb'
-  # 
+  #
   # class Myapp < Sinatra::Base
-  #   register Sinatra::RhoconnectEndpoints
+  #   register Sinatra::RhoconnectrbEndpoints
   #   get '/' do
   #     'hello world'
   #   end
@@ -143,13 +143,13 @@ if defined? Sinatra
   module Sinatra
     module RhoconnectHelpers
       def call_helper(method,*args)
-        code, c_type, body = Rhoconnect::EndpointHelpers.send(method,*args)
+        code, c_type, body = Rhoconnectrb::EndpointHelpers.send(method,*args)
         content_type c_type['Content-Type']
         status code
         body[0]
       end
     end
-    
+
     module RhoconnectEndpoints
       def self.registered(app)
         # install our endpoint helpers
