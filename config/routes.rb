@@ -1,7 +1,7 @@
 Rails.application.routes.draw do
-  match '/rhoconnect/authenticate' => Rhoconnect::Authenticate
-  match '/rhoconnect/query' => Rhoconnect::Query
-  match '/rhoconnect/create' => Rhoconnect::Create
-  match '/rhoconnect/update' => Rhoconnect::Update
-  match '/rhoconnect/delete' => Rhoconnect::Delete
+  match '/rhoconnect/authenticate' => Rhoconnectrb::Authenticate, via: [:post]
+  match '/rhoconnect/query' => Rhoconnectrb::Query, via: [:post]
+  match '/rhoconnect/create' => Rhoconnectrb::Create, via: [:post]
+  match '/rhoconnect/update' => Rhoconnectrb::Update, via: [:post]
+  match '/rhoconnect/delete' => Rhoconnectrb::Delete, via: [:post]
 end
